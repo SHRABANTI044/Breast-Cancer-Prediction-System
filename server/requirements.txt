@@ -1,5 +1,5 @@
-# Flask API, SQLite/PostgreSQL accounts, and inference stack for BreastCare AI
-# Model is already trained — artifacts live in ml/ (model_pipeline.joblib + JSONs)
+# Flask API, PostgreSQL accounts, local SQLite development, and model inference
+# Model is already trained — artifacts live in ml/ (model.pkl, scaler.pkl, and JSON files)
 numpy>=1.24
 pandas>=2.0
 scikit-learn==1.6.1

@@ -52,12 +52,24 @@ DATABASE_FILE = Path(
 DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = "postgresql://" + DATABASE_URL[len("postgres://") :]
+APP_ENV = os.environ.get("APP_ENV", "development").strip().lower()
+IS_PRODUCTION = APP_ENV == "production" or bool(os.environ.get("RENDER_SERVICE_ID"))
+FLASK_SECRET_KEY = os.environ.get("FLASK_SECRET_KEY")
+
+if IS_PRODUCTION and not DATABASE_URL:
+    raise RuntimeError(
+        "DATABASE_URL must be configured in production; PostgreSQL is required."
+    )
+if IS_PRODUCTION and not FLASK_SECRET_KEY:
+    raise RuntimeError(
+        "FLASK_SECRET_KEY must be configured in production to keep sessions secure."
+    )
 
 FULL_LABELS = {"B": "Benign", "M": "Malignant"}
 
 app = Flask(__name__)
 app.config.update(
-    SECRET_KEY=os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32),
+    SECRET_KEY=FLASK_SECRET_KEY or secrets.token_hex(32),
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=os.environ.get("SESSION_COOKIE_SECURE", "").lower()
@@ -77,13 +89,14 @@ def _is_postgres() -> bool:
 
 def _connect_database() -> sqlite3.Connection | psycopg.Connection[dict[str, Any]]:
     if _is_postgres():
-        connection = psycopg.connect(app.config["DATABASE_URL"])
+        connection = psycopg.connect(app.config["DATABASE_URL"], connect_timeout=10)
         connection.row_factory = cast(Any, dict_row)
         return cast(psycopg.Connection[dict[str, Any]], connection)
     database_path = Path(app.config.get("DATABASE", DATABASE_FILE))
     database_path.parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(database_path)
     connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON")
     return connection
 
 
@@ -129,6 +142,11 @@ def _execute(
 def _initialize_database() -> None:
     with _database() as connection:
         if isinstance(connection, psycopg.Connection):
+            # Serialize Gunicorn worker startup while idempotent DDL runs.
+            _execute(
+                connection,
+                "SELECT pg_advisory_xact_lock(477867884660)",
+            )
             _execute(
                 connection,
                 """
@@ -196,7 +214,21 @@ def _login_required(handler: Callable):
     return wrapped
 
 
-_initialize_database()
+try:
+    _initialize_database()
+except (sqlite3.Error, psycopg.Error):
+    if _is_postgres():
+        raise RuntimeError(
+            "Could not initialize PostgreSQL tables. Check DATABASE_URL and database availability."
+        ) from None
+    raise RuntimeError("Could not initialize the local SQLite database.") from None
+
+
+@app.errorhandler(psycopg.Error)
+@app.errorhandler(sqlite3.Error)
+def handle_database_error(error: Exception):
+    app.logger.error("Database operation failed (%s)", type(error).__name__)
+    return jsonify({"error": "Database temporarily unavailable. Please try again."}), 503
 
 # Notebook model: bare LogisticRegression (31 feats incl. id) trained on
 # StandardScaler output — scaler.pkl is REQUIRED to score raw values.
@@ -579,4 +611,4 @@ def delete_history_entry(prediction_id: str):
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    app.run(host="127.0.0.1", port=5000, debug=not IS_PRODUCTION)

@@ -47,15 +47,26 @@ In local development the Vite dev server proxies `/api` to Flask automatically. 
 
 ### Accounts, history, and database
 
-Sign-up saves the user's name, normalized email, and a Werkzeug password hash in PostgreSQL when
-`DATABASE_URL` is set, or `server/users.sqlite3` for local development. Passwords are never stored
-as plain text. Successful predictions and their input values are saved to the same database and
-associated with the signed-in user. History can be loaded, deleted, and cleared from the account.
-Email addresses are unique case-insensitively. Sign-in checks the stored hash and creates an
-HTTP-only, 12-hour server session. The dashboard, model metrics, predictions, and history require
-authentication.
+Sign-up saves the user's name, normalized email, and a Werkzeug password hash in PostgreSQL on
+Render. The app reads the connection string from `DATABASE_URL`; production startup fails clearly
+if it is missing. `FLASK_SECRET_KEY` is also required in production so signed-in sessions stay
+valid across restarts. Passwords are never stored as plain text. Successful predictions and their
+input values are saved to the active database (PostgreSQL on Render, SQLite in local development)
+and associated with the signed-in user. History can be loaded, deleted, and cleared from the
+account. Sign-in checks the stored hash and creates an HTTP-only, 12-hour server session. The
+dashboard, model metrics, predictions, and history require authentication.
 
-For local development, the Flask API defaults to SQLite and Vite proxies `/api` to Flask.
+For local development, the Flask API uses `server/users.sqlite3` unless `DATABASE_URL` is set.
+SQLite is not used as a production fallback. PostgreSQL tables are created idempotently when the
+Flask application starts; no page request is needed to initialize them.
+
+The existing `server/users.sqlite3` file is local-only and excluded from Git. It currently contains
+2 user records and 5 prediction records. Those records are not copied automatically to the Render
+database. If they must be retained, first make a separate backup of the SQLite file, then use a
+one-time migration that maps each SQLite user ID to its PostgreSQL user ID (preserving existing
+password hashes), copies the corresponding prediction rows with those mapped IDs, and inserts
+without overwriting existing PostgreSQL rows. Verify account and history counts in PostgreSQL
+before treating the migration as complete; do not upload the SQLite file to the public repository.
 
 #### Deploy to Render
 
@@ -69,8 +80,11 @@ persist across app redeploys. The configured PostgreSQL plan is `basic-256mb` an
 charges; confirm current Render pricing before creating it.
 
 The database connection string is a secret: keep it in Render environment settings and do not
-commit it to source control. For other deployments, set `DATABASE_URL` to a PostgreSQL connection
-string, a stable random `FLASK_SECRET_KEY`, and `SESSION_COOKIE_SECURE=true` over HTTPS.
+commit it to source control. The Render configuration sets `APP_ENV=production`; it generates
+`FLASK_SECRET_KEY` and sets secure session cookies. For other production deployments, set
+`APP_ENV=production`, `DATABASE_URL` to a PostgreSQL connection string, a stable random
+`FLASK_SECRET_KEY`, and `SESSION_COOKIE_SECURE=true` over HTTPS. For local use, keep
+`APP_ENV=development` (the default) and use SQLite or set a private local `DATABASE_URL`.
 
 ### API
 
