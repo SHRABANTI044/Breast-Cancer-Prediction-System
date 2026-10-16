@@ -1,0 +1,121 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:wght@300..800&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* Warm porcelain shell */
+  --color-cream: #faf5f3;
+  --color-shell: #fffdfc;
+  --color-line: #ecdfe3;
+
+  /* Deep plum ink */
+  --color-ink: #2a1220;
+  --color-ink-soft: #71586a;
+  --color-ink-faint: #a08a99;
+
+  /* Rose brand scale */
+  --color-brand-50: #fff0f4;
+  --color-brand-100: #ffe0e9;
+  --color-brand-200: #ffb9ce;
+  --color-brand-300: #ff8faf;
+  --color-brand-400: #f25b8b;
+  --color-brand-500: #e0346b;
+  --color-brand-600: #c9184a;
+  --color-brand-700: #a4133c;
+  --color-brand-800: #800f2f;
+  --color-brand-900: #590d22;
+
+  /* Sidebar plum */
+  --color-plum-950: #170a12;
+  --color-plum-900: #21101a;
+  --color-plum-800: #2e1724;
+  --color-plum-700: #3f2133;
+  --color-plum-300: #a7869a;
+  --color-plum-200: #c6afc0;
+
+  /* Benign sage */
+  --color-sage-100: #e2f2ea;
+  --color-sage-200: #bfe6d2;
+  --color-sage-500: #2e9e6b;
+  --color-sage-600: #258457;
+  --color-sage-700: #1c6947;
+}
+
+html,
+body {
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-brand-200);
+  color: var(--color-brand-900);
+}
+
+/* Slim, tinted scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d8bfc9 transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #d8bfc9;
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Subtle grain + vignette for the app shell */
+.app-texture {
+  background-image:
+    radial-gradient(1200px 600px at 100% -10%, rgba(201, 24, 74, 0.05), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(46, 158, 107, 0.05), transparent 55%);
+}
+
+/* FOCUS STATES */
+.focusable:focus-visible {
+  outline: 2px solid var(--color-brand-400);
+  outline-offset: 2px;
+}
+
+input[type="text"].tabular,
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Pulsing status dot */
+@keyframes pulse-dot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.55); opacity: 0.55; }
+}
+.pulse-dot {
+  animation: pulse-dot 1.8s ease-in-out infinite;
+}
+
+/* Slow rotating dashed ring for idle result panel */
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+.spin-slow {
+  animation: spin-slow 24s linear infinite;
+}
+
+/* Shimmer on loading */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.shimmer {
+  background-image: linear-gradient(90deg, rgba(201,24,74,0) 0%, rgba(201,24,74,0.12) 50%, rgba(201,24,74,0) 100%);
+  background-size: 400px 100%;
+  animation: shimmer 1.6s linear infinite;
+}

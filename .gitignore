@@ -1,0 +1,13 @@
+server/users.sqlite3
+server/users.sqlite3-shm
+server/users.sqlite3-wal
+server/users.sqlite3-journal
+.venv/
+venv/
+node_modules/
+dist/
+__pycache__/
+*.py[cod]
+.env
+.env.*
+!.env.example
